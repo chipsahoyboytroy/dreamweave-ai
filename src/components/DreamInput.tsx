@@ -46,7 +46,7 @@ export default function DreamInput({
   const [remainingDreams, setRemainingDreams] = useState<number | null>(null);
 
   const hasMultimodal = imageBase64 || audioBase64;
-  const canSubmit = dreamText.trim().length >= 10 && !isSubmitting && remainingDreams !== 0;
+  const canSubmit = dreamText.trim().length >= 10 && !isSubmitting && (remainingDreams === null || remainingDreams > 0);
 
   // Fetch remaining dreams on mount
   useEffect(() => {
@@ -197,7 +197,9 @@ export default function DreamInput({
 
           <div className="flex items-center justify-between mt-3">
             <span className="text-xs text-dream-muted">
-              {dreamText.length}/5000
+              {dreamText.trim().length < 10
+                ? `${10 - dreamText.trim().length} more characters needed`
+                : `${dreamText.length}/5000`}
             </span>
           </div>
         </div>
@@ -334,7 +336,7 @@ export default function DreamInput({
             <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/5 border border-red-500/20">
               <Lock className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-dream-muted">
-                You&apos;ve used all 3 free dream interpretations.{" "}
+                You&apos;ve used your free dream interpretation.{" "}
                 <a href="/pricing" className="text-dream-accent underline">
                   Purchase credits
                 </a>{" "}

@@ -92,10 +92,10 @@ export default function PricingPage() {
             },
             {
               q: "Can I use DreamWeave for free?",
-              a: "Yes! Every user gets 3 free dream interpretations with the full experience — Jungian analysis, story continuation, archetype mapping, and more. No sign-up required.",
+              a: "Yes! Every user gets 1 free dream interpretation with the full experience — Jungian analysis, story continuation, archetype mapping, and more. No sign-up required.",
             },
             {
-              q: "What happens after my 3 free dreams?",
+              q: "What happens after my free dream?",
               a: "After your free trial, you can purchase credit packs to continue. Each credit unlocks one complete dream interpretation.",
             },
             {

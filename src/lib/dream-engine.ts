@@ -576,8 +576,10 @@ function detectThemes(symbols: Array<{ keyword: string; symbol: SymbolEntry }>, 
 
 function generateImagePrompt(symbols: Array<{ keyword: string; symbol: SymbolEntry }>, text: string, mood?: string): string {
   const symbolNames = symbols.slice(0, 3).map(s => s.keyword);
-  const moodStr = mood ? `, ${mood} mood` : "";
-  return `Surreal dreamscape with ${symbolNames.join(", ")}${moodStr}, ethereal lighting, cosmic elements`;
+  const keywords = extractKeywords(text).slice(0, 4);
+  const elements = [...new Set([...symbolNames, ...keywords])].slice(0, 5);
+  const moodStr = mood ? `, ${mood} atmosphere` : "";
+  return `Digital art, surreal dreamscape featuring ${elements.join(", ")}${moodStr}, ethereal lighting, painterly quality, cosmic elements, watercolor meets digital surrealism`;
 }
 
 // ─── Build Interpretation Text ───────────────────────
@@ -590,33 +592,48 @@ function buildInterpretation(
   emotions: string[],
 ): string {
   const lines: string[] = [];
+  const keywords = extractKeywords(text);
+  // Pick a few vivid keywords from the dream to reference throughout
+  const dreamWords = keywords.slice(0, 6);
+  const topWords = dreamWords.slice(0, 3);
 
   lines.push("## 🔮 Dream Interpretation\n");
 
   // Symbol analysis
   lines.push("### The Symbolic Landscape\n");
   if (symbols.length > 0) {
-    lines.push("Your dream is rich with meaningful symbols, each carrying layers of significance:\n");
+    const symbolList = symbols.slice(0, 3).map(s => `*${s.keyword}*`).join(", ");
+    lines.push(`Your dream weaves together potent imagery — ${symbolList} — each carrying layers of meaning drawn from your unique inner world:\n`);
     for (const { keyword, symbol } of symbols.slice(0, 5)) {
       const capitalizedKeyword = keyword.charAt(0).toUpperCase() + keyword.slice(1);
       lines.push(`**${capitalizedKeyword}** — ${symbol.universal}. ${symbol.personal}\n`);
     }
   } else {
-    lines.push("While your dream doesn't feature the most common universal symbols, its very uniqueness speaks to the deeply personal nature of your psyche's language. The images you've described are your unconscious mind's own vocabulary — words only you can fully translate, though their emotional resonance reveals much.\n");
+    // Even without symbol matches, reference the user's own words
+    const userImagery = topWords.length > 0
+      ? `the imagery of **${topWords.join("**, **")}**`
+      : "the images you've described";
+    lines.push(`While your dream doesn't feature the most commonly catalogued universal symbols, ${userImagery} speaks to the deeply personal vocabulary of your psyche. These are images your unconscious has chosen specifically for you — they carry meaning that generic symbol dictionaries can't capture. The emotional charge they carry is itself the message.\n`);
   }
 
-  // Emotional arc
+  // Emotional arc — weave in dream words
   lines.push("\n### The Emotional Arc\n");
   if (mood && MOOD_INTERPRETATIONS[mood]) {
     lines.push(MOOD_INTERPRETATIONS[mood] + "\n");
   }
   if (emotions.length > 0) {
     const emotionList = emotions.join(", ");
-    lines.push(`The emotional palette of this dream weaves together threads of **${emotionList}**. These aren't random feelings — they're your psyche's honest report on what's moving beneath the surface of your waking awareness. Notice which emotion lingers most; that's where your attention is being drawn.\n`);
+    const contextualDetail = topWords.length > 0
+      ? ` The presence of **${topWords[0]}** in your dream amplifies this emotional landscape — it suggests your psyche is drawing attention to something specific.`
+      : "";
+    lines.push(`The emotional palette of this dream weaves together threads of **${emotionList}**.${contextualDetail} These aren't random feelings — they're your psyche's honest report on what's moving beneath the surface of your waking awareness. Notice which emotion lingers most; that's where your attention is being drawn.\n`);
   }
 
-  // Archetypes
+  // Archetypes — reference dream content
   lines.push("\n### Archetypes at Play\n");
+  if (topWords.length > 0) {
+    lines.push(`Within your dream of **${topWords.join("** and **")}**, several ancient patterns emerge:\n`);
+  }
   const archetypeDescriptions: Record<string, { emoji: string; desc: string }> = {
     "The Shadow": { emoji: "🌑", desc: "Something hidden is seeking the light of your awareness" },
     "The Anima": { emoji: "🌙", desc: "Your intuitive, creative nature is stirring" },
@@ -639,23 +656,31 @@ function buildInterpretation(
     }
   }
 
-  // Science lens
+  // Science lens — reference dream specifics
   lines.push("\n\n### Through the Lens of Science\n");
+  const keywordRef = topWords.length > 0
+    ? `The appearance of **${topWords[0]}** in your dream is likely connected to recent experiences or thoughts your waking mind has been processing. `
+    : "";
   const scienceInsights = [
-    "Modern neuroscience tells us that dreaming is one of the brain's most sophisticated processes. During REM sleep, the prefrontal cortex — your rational executive — goes quiet, while the emotional centers (amygdala) and memory regions (hippocampus) light up like a city at night. This dream bears the hallmarks of **emotional memory consolidation** — your brain is filing, connecting, and making sense of experiences that your waking mind hasn't fully processed.",
-    "From a cognitive neuroscience perspective, this dream shows signs of **threat simulation theory** at work — your brain rehearses challenging scenarios during sleep so you're better prepared in waking life. Far from being a source of distress, this rehearsal is your mind's ancient survival wisdom expressing itself through the language of imagery and narrative.",
-    "Neuroscience research suggests that dreams like this serve a **creative problem-solving** function. When the analytical mind sleeps, the brain makes unusual connections between distant memories and concepts — connections that could never form through logical thinking alone. The surprising elements of your dream may hold the seeds of insight about a waking-life question you've been turning over.",
-    "Contemporary dream research points to this dream as an example of **emotional regulation through sleep**. Your brain is essentially providing itself therapy — revisiting emotionally charged material in a safe neurological state where it can be reprocessed with less distress. The ancient Greeks weren't wrong when they called dreams 'the healing sleep.'",
+    `${keywordRef}Modern neuroscience tells us that dreaming is one of the brain's most sophisticated processes. During REM sleep, the prefrontal cortex — your rational executive — goes quiet, while the emotional centers (amygdala) and memory regions (hippocampus) light up like a city at night. This dream bears the hallmarks of **emotional memory consolidation** — your brain is filing, connecting, and making sense of experiences that your waking mind hasn't fully processed.`,
+    `${keywordRef}From a cognitive neuroscience perspective, this dream shows signs of **threat simulation theory** at work — your brain rehearses challenging scenarios during sleep so you're better prepared in waking life. Far from being a source of distress, this rehearsal is your mind's ancient survival wisdom expressing itself through the language of imagery and narrative.`,
+    `${keywordRef}Neuroscience research suggests that dreams like this serve a **creative problem-solving** function. When the analytical mind sleeps, the brain makes unusual connections between distant memories and concepts — connections that could never form through logical thinking alone. The surprising elements of your dream may hold the seeds of insight about a waking-life question you've been turning over.`,
+    `${keywordRef}Contemporary dream research points to this dream as an example of **emotional regulation through sleep**. Your brain is essentially providing itself therapy — revisiting emotionally charged material in a safe neurological state where it can be reprocessed with less distress. The ancient Greeks weren't wrong when they called dreams 'the healing sleep.'`,
   ];
   lines.push(scienceInsights[Math.floor(Math.random() * scienceInsights.length)] + "\n");
 
-  // Invitation
+  // Invitation — reference specific dream imagery
   lines.push("\n### The Invitation\n");
+  const imageRef = dreamWords.length > 1
+    ? `the **${dreamWords[0]}** and **${dreamWords[1]}**`
+    : dreamWords.length === 1
+    ? `the **${dreamWords[0]}**`
+    : "the images";
   const invitations = [
-    `This dream is an invitation to explore the territories it has mapped for you. Consider journaling about the images that felt most charged — the ones that still shimmer in memory. Your unconscious is offering you a gift wrapped in imagery; unwrapping it gently, with curiosity rather than anxiety, is the work of self-understanding. What would it look like to honor what this dream is showing you in your waking life?`,
-    `Your psyche has crafted this dream with care, selecting each image for its resonance with your inner landscape. The invitation is not to "solve" the dream but to sit with it — let its images wash over you throughout the day and notice what they illuminate. Pay attention to moments when waking life echoes the dream; those synchronicities are breadcrumbs on the path of self-discovery.`,
-    `This dream is a letter from your deeper self, written in the language of symbol and sensation. The invitation: carry one image from this dream with you today. Let it be a touchstone, a private talisman. Notice what it attracts in your waking experience — conversations, decisions, moments of recognition. Your unconscious is always working on your behalf, even when the conscious mind is looking elsewhere.`,
-    `What this dream ultimately invites you toward is a deeper relationship with your own inner world. The symbols here aren't puzzles to be solved but doorways to be walked through. Take what resonates and leave the rest — you are the final authority on your own dream's meaning. If any of this stirs something that feels too heavy to carry alone, please know that dream exploration with a therapist can be profoundly rewarding.`,
+    `This dream is an invitation to explore how ${imageRef} maps onto your waking life. Consider journaling about the images that felt most charged — the ones that still shimmer in memory. Your unconscious chose these specific images for a reason; unwrapping that meaning gently, with curiosity rather than anxiety, is the work of self-understanding. What would it look like to honor what this dream is showing you?`,
+    `Your psyche crafted this dream with care, placing ${imageRef} at the center for a reason that resonates with your inner landscape. The invitation is not to "solve" the dream but to sit with it — let its images wash over you throughout the day and notice what they illuminate. Pay attention to moments when waking life echoes the dream; those synchronicities are breadcrumbs on the path of self-discovery.`,
+    `This dream is a letter from your deeper self, with ${imageRef} as its central metaphor. The invitation: carry one image from this dream with you today. Let it be a touchstone, a private talisman. Notice what it attracts in your waking experience — conversations, decisions, moments of recognition. Your unconscious is always working on your behalf, even when the conscious mind is looking elsewhere.`,
+    `What this dream ultimately invites you toward — through ${imageRef} and everything they represent — is a deeper relationship with your own inner world. The symbols here aren't puzzles to be solved but doorways to be walked through. Take what resonates and leave the rest — you are the final authority on your own dream's meaning. If any of this stirs something that feels too heavy to carry alone, please know that dream exploration with a therapist can be profoundly rewarding.`,
   ];
   lines.push(invitations[Math.floor(Math.random() * invitations.length)] + "\n");
 
@@ -669,6 +694,8 @@ function buildStory(text: string, symbols: Array<{ keyword: string; symbol: Symb
   lines.push("## ✨ Your Dream, Continued\n\n");
 
   // Extract key elements for the story
+  const keywords = extractKeywords(text);
+  const dreamWords = keywords.slice(0, 6);
   const symbolWords = symbols.slice(0, 3).map(s => s.keyword);
   const hasWater = symbolWords.some(s => ["water", "ocean", "river", "rain"].includes(s));
   const hasNature = symbolWords.some(s => ["forest", "tree", "garden", "flower", "mountain"].includes(s));
@@ -677,21 +704,26 @@ function buildStory(text: string, symbols: Array<{ keyword: string; symbol: Symb
   const hasLight = symbolWords.some(s => ["light", "sun", "star", "moon", "fire"].includes(s));
 
   // Build a personalized story using dream elements
-  // Opening
+  // Opening — reference actual dream words
+  const dreamRef = dreamWords.length > 0
+    ? dreamWords.slice(0, 2).join(" and the ")
+    : "everything you witnessed";
   const openings = [
-    "You find yourself standing exactly where the dream left you — but something has shifted. The air tastes different now, charged with a luminous electricity that makes your skin hum.",
-    "The dream doesn't end. It deepens. You feel the boundary between sleeping and waking dissolve like morning mist, and suddenly you're *there* again — more present than before.",
-    "You return to the dream's central moment, but this time you are not merely experiencing it. You are choosing it. The landscape recognizes you, and every element turns its face toward your arrival.",
+    `You find yourself standing exactly where the dream left you — the ${dreamRef} still vivid, still humming with presence. But something has shifted. The air tastes different now, charged with a luminous electricity that makes your skin hum.`,
+    `The dream doesn't end. It deepens. The ${dreamRef} remains, but transformed — more real than before. You feel the boundary between sleeping and waking dissolve like morning mist, and suddenly you're *there* again — more present than before.`,
+    `You return to the dream's central moment — the ${dreamRef} exactly as you remember, yet subtly changed. This time you are not merely experiencing it. You are choosing it. The landscape recognizes you, and every element turns its face toward your arrival.`,
   ];
   lines.push(openings[Math.floor(Math.random() * openings.length)] + "\n\n");
 
   // Middle sections based on symbols found
   if (hasWater) {
-    lines.push("The water is alive with intention now. It doesn't merely flow — it *communicates*, each ripple a syllable in a language older than words. You kneel at its edge and see not your reflection but your becoming — the version of you that exists just beyond this moment, shimmering with possibility. The water rises to meet your fingertips, warm as tears, cool as forgiveness.\n\n");
+    const waterWord = symbolWords.find(s => ["water", "ocean", "river", "rain"].includes(s)) || "water";
+    lines.push(`The ${waterWord} is alive with intention now. It doesn't merely flow — it *communicates*, each ripple a syllable in a language older than words. You kneel at its edge and see not your reflection but your becoming — the version of you that exists just beyond this moment, shimmering with possibility. The ${waterWord} rises to meet your fingertips, warm as tears, cool as forgiveness.\n\n`);
   }
 
   if (hasNature) {
-    lines.push("The landscape breathes around you. Trees lean in as if they've been waiting to share a secret, their leaves whispering in a rhythm that matches your heartbeat. Roots like ancient veins pulse beneath your feet, connecting everything — the earth remembers every step you've ever taken, and it has grown something beautiful in every footprint you left behind.\n\n");
+    const natureWord = symbolWords.find(s => ["forest", "tree", "garden", "flower", "mountain"].includes(s)) || "forest";
+    lines.push(`The ${natureWord} breathes around you. Trees lean in as if they've been waiting to share a secret, their leaves whispering in a rhythm that matches your heartbeat. Roots like ancient veins pulse beneath your feet, connecting everything — the earth remembers every step you've ever taken, and it has grown something beautiful in every footprint you left behind.\n\n`);
   }
 
   if (hasFlight) {
@@ -703,28 +735,34 @@ function buildStory(text: string, symbols: Array<{ keyword: string; symbol: Symb
   }
 
   if (hasLight) {
-    lines.push("Light pours in from a direction that has no name — not above, not ahead, but from the place where meaning lives. It illuminates everything without casting shadows, a light that reveals without judging, that warms without burning. Under its gaze, you feel seen — not observed, but truly *seen* — and for the first time, being seen feels like coming home.\n\n");
+    const lightWord = symbolWords.find(s => ["light", "sun", "star", "moon", "fire"].includes(s)) || "light";
+    lines.push(`The ${lightWord} pours in from a direction that has no name — not above, not ahead, but from the place where meaning lives. It illuminates everything without casting shadows, a light that reveals without judging, that warms without burning. Under its gaze, you feel seen — not observed, but truly *seen* — and for the first time, being seen feels like coming home.\n\n`);
   }
 
-  // If no specific symbols matched, provide a universal continuation
+  // If no specific symbols matched, build from keywords
   if (!hasWater && !hasNature && !hasFlight && !hasDarkness && !hasLight) {
-    lines.push("The dream-world reshapes itself around your attention. Where you look, detail blooms — textures you can feel with your eyes, sounds that have color, distances that carry emotion. A path appears, not beneath your feet but growing *from* them, extending toward a horizon that pulses with the same rhythm as your breath.\n\n");
-    lines.push("You walk, and with each step the world becomes more itself — clearer, more vivid, more honest. The symbols of your dream arrange themselves around you like old friends arriving at a gathering, each bearing a gift they've carried a long way to deliver.\n\n");
+    const kw1 = dreamWords[0] || "unknown";
+    const kw2 = dreamWords[1] || "mystery";
+    const kw3 = dreamWords[2] || "silence";
+    lines.push(`The ${kw1} reshapes itself around your attention. Where you look, detail blooms — textures you can feel with your eyes, sounds that have color, distances that carry emotion. The ${kw2} is here too, woven into the fabric of this place like a thread of gold in dark cloth.\n\n`);
+    lines.push(`You move toward it, and with each step the world becomes more itself — clearer, more vivid, more honest. The ${kw3} arranges itself around you like an old friend arriving at a gathering, bearing a gift carried a long way to deliver.\n\n`);
   }
 
-  // Transformation moment
+  // Transformation moment — reference dream words
+  const pivotWord = dreamWords[Math.floor(Math.random() * Math.max(1, dreamWords.length))] || "dream";
   const transformations = [
-    "And in this deep-dream space, a transformation begins. Not dramatic, not frightening — as natural as a flower opening at dawn. You feel layers of old certainty falling away like autumn leaves, and beneath them: something green, something true, something that has been waiting with infinite patience to emerge.\n\n",
-    "Something shifts in the center of your chest — a warmth, an opening, like a door in a room you'd forgotten existed. Behind it: not answers, but the *ability* to live the questions beautifully. You understand now that the dream was never a riddle to solve but a landscape to inhabit, a frequency to tune to.\n\n",
-    "Time folds. Past and future meet in the palm of your hand, and you see — with a clarity that brings tears — that every seemingly random event of your life has been a word in a sentence that is now, finally, becoming legible. The dream was the Rosetta Stone, and your heart is the translator.\n\n",
+    `And in this deep-dream space, a transformation begins. The ${pivotWord} was the catalyst all along — not dramatic, not frightening, as natural as a flower opening at dawn. You feel layers of old certainty falling away like autumn leaves, and beneath them: something green, something true, something that has been waiting with infinite patience to emerge.\n\n`,
+    `Something shifts in the center of your chest — a warmth, an opening, like a door in a room you'd forgotten existed. The ${pivotWord} has unlocked it. Behind it: not answers, but the *ability* to live the questions beautifully. You understand now that the dream was never a riddle to solve but a landscape to inhabit, a frequency to tune to.\n\n`,
+    `Time folds. Past and future meet in the palm of your hand, and the ${pivotWord} is the bridge between them. You see — with a clarity that brings tears — that every seemingly random event of your life has been a word in a sentence that is now, finally, becoming legible. The dream was the Rosetta Stone, and your heart is the translator.\n\n`,
   ];
   lines.push(transformations[Math.floor(Math.random() * transformations.length)]);
 
-  // Closing
+  // Closing — use dream-specific language
+  const closingRef = dreamWords.slice(0, 2).map(w => `the ${w}`).join(" and ") || "these images";
   const closings = [
-    "The dream begins to thin at the edges — not fading, but transcribing itself onto the inner walls of your waking consciousness. You'll carry these images like seeds in your pocket, and in the days to come, you'll notice them germinating in unexpected moments: a glance, a gesture, a sudden understanding. The dream is over. The dreaming has only begun.",
-    "Slowly, tenderly, the dream releases you — the way a wave releases the shore, knowing it will return. You surface into waking with something new inside you: not knowledge exactly, but a quality of attention, a willingness to see the world as the dream saw you — with wonder, with depth, with love.",
-    "As consciousness reclaims you, the dream doesn't vanish — it *translates*. Every image becomes a seed, every emotion a compass bearing, every symbol a key to a door you haven't reached yet. You wake not from the dream but *with* it, carrying its luminous cargo into the waiting world.",
+    `The dream begins to thin at the edges — ${closingRef} not fading, but transcribing themselves onto the inner walls of your waking consciousness. You'll carry these images like seeds in your pocket, and in the days to come, you'll notice them germinating in unexpected moments: a glance, a gesture, a sudden understanding. The dream is over. The dreaming has only begun.`,
+    `Slowly, tenderly, the dream releases you — ${closingRef} lingering the way a wave releases the shore, knowing it will return. You surface into waking with something new inside you: not knowledge exactly, but a quality of attention, a willingness to see the world as the dream saw you — with wonder, with depth, with love.`,
+    `As consciousness reclaims you, ${closingRef} don't vanish — they *translate*. Every image becomes a seed, every emotion a compass bearing, every symbol a key to a door you haven't reached yet. You wake not from the dream but *with* it, carrying its luminous cargo into the waiting world.`,
   ];
   lines.push(closings[Math.floor(Math.random() * closings.length)]);
 

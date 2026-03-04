@@ -17,7 +17,12 @@ import { prisma } from "@/lib/db";
 import { dreamInputSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
 
-const FREE_DREAM_LIMIT = 3;
+// Prevent Next.js from caching this route or any fetch() calls within it
+// Without this, OpenAI SDK responses get cached and every dream returns the same result
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+const FREE_DREAM_LIMIT = 1;
 
 // SECURITY: Route-level rate limiter (supplements edge middleware's global limiter).
 // This is a tighter per-user/IP limit for the expensive dream generation endpoint.
@@ -82,10 +87,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── Usage tracking: first 3 free, then require credits ───
+    // ─── Usage tracking: first free, then require credits ───
     let useFreeCredit = false;
     if (userId) {
-      // Authenticated user — check credits (starts with 3 free)
+      // Authenticated user — check credits (starts with 1 free)
       try {
         const credits = await getUserCredits(userId);
         if (credits < 1) {
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest) {
         const guestDreams = await getGuestDreamCount(guestId);
         if (guestDreams >= FREE_DREAM_LIMIT) {
           return new Response(
-            JSON.stringify({ error: "You've used all 3 free dreams. Sign up and purchase credits to continue." }),
+            JSON.stringify({ error: "You've used your free dream. Sign up and purchase credits to continue." }),
             { status: 402 }
           );
         }

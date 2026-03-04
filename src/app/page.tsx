@@ -200,7 +200,7 @@ export default function Home() {
           >
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-dream-accent" />
-              <span>3 free interpretations</span>
+              <span>1 free interpretation</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-dream-border" />
             <div className="flex items-center gap-1.5">

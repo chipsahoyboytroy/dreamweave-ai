@@ -6,7 +6,7 @@
 import { prisma } from "./db";
 import { logger } from "./logger";
 
-export const FREE_DREAM_LIMIT = 3;
+export const FREE_DREAM_LIMIT = 1;
 
 export async function getUserCredits(userId: string): Promise<number> {
   const user = await prisma.user.findUnique({

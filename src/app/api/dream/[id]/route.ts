@@ -8,6 +8,8 @@ import { prisma } from "@/lib/db";
 import { dreamIdSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

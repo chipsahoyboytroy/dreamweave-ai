@@ -8,7 +8,12 @@ import { logger } from "./logger";
 
 // API key is optional — the app works without it using the built-in dream engine
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      // Prevent Next.js from caching OpenAI API responses
+      // Without this, every dream returns the same cached interpretation
+      fetch: (url, init) => fetch(url, { ...init, cache: "no-store" }),
+    })
   : null;
 
 export default openai;

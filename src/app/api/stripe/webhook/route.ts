@@ -9,6 +9,8 @@ import { addCredits } from "@/lib/credits";
 import { logger } from "@/lib/logger";
 import Stripe from "stripe";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   // If Stripe isn't configured, return early
   if (!isStripeAvailable() || !stripe) {

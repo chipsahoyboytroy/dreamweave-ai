@@ -149,9 +149,9 @@ export const PRICING_PLANS: PricingPlan[] = [
     id: "free",
     name: "Free Trial",
     price: 0,
-    credits: 3,
+    credits: 1,
     features: [
-      "3 free dream interpretations",
+      "1 free dream interpretation",
       "Full Jungian archetype analysis",
       "AI story continuation",
       "Shareable Dream Cards",

@@ -10,6 +10,8 @@ import { getOrCreateStripeCustomer } from "@/lib/credits";
 import { checkoutSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe is configured
