@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  credits       Int       @default(3)
+  tier          String    @default("free") // free | starter | explorer | visionary
+  stripeCustomerId String? @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  dreams   Dream[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Dream {
+  id        String   @id @default(cuid())
+  userId    String?
+  guestId   String?
+
+  // Inputs
+  textInput    String
+  imageInput   String? // base64 or URL
+  audioInput   String? // base64 or URL
+  mood         String?
+
+  // AI Outputs
+  interpretation String?
+  story          String?
+  archetypes     String   @default("[]")
+  emotions       String   @default("[]")
+  themes         String   @default("[]")
+  generatedImage String?
+  audioNarration String?
+  summary        String?
+
+  // Meta
+  tier      String   @default("free")
+  creditsUsed Int    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([guestId])
+  @@index([createdAt])
+  @@map("dreams")
+}
+
+model CreditTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int      // positive = added, negative = consumed
+  reason    String   // "purchase" | "dream_generation" | "bonus"
+  stripePaymentId String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("credit_transactions")
+}
