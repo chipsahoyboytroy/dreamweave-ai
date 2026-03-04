@@ -65,14 +65,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
-        // Fetch credits
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { credits: true, tier: true },
-        });
-        if (dbUser) {
-          (session.user as unknown as Record<string, unknown>).credits = dbUser.credits;
-          (session.user as unknown as Record<string, unknown>).tier = dbUser.tier;
+        // Fetch credits — wrapped in try/catch so DB failures don't break auth entirely
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { credits: true, tier: true },
+          });
+          if (dbUser) {
+            (session.user as unknown as Record<string, unknown>).credits = dbUser.credits;
+            (session.user as unknown as Record<string, unknown>).tier = dbUser.tier;
+          }
+        } catch {
+          // If DB is unreachable, let session proceed with defaults
+          // rather than failing every authenticated request
+          (session.user as unknown as Record<string, unknown>).credits = 3;
+          (session.user as unknown as Record<string, unknown>).tier = "free";
         }
       }
       return session;

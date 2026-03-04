@@ -26,7 +26,7 @@ export default function CreditBalance() {
       const data = await res.json();
       setRemaining(data.remaining ?? data.credits ?? 0);
     } catch {
-      setRemaining(0);
+      setRemaining(null);
     }
   };
 

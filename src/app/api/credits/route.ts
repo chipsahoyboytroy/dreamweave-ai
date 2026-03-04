@@ -43,11 +43,12 @@ export async function GET(request: NextRequest) {
       tier: "free",
     });
   } catch (error) {
-    // SECURITY: Log error, return safe fallback (OWASP A09)
+    // SECURITY: Log error, return optimistic fallback so users aren't
+    // locked out by transient DB errors (OWASP A09)
     logger.error("Credits API error", { error: error instanceof Error ? error.message : "unknown" });
     return NextResponse.json({
-      credits: 0,
-      remaining: 0,
+      credits: FREE_DREAM_LIMIT,
+      remaining: FREE_DREAM_LIMIT,
       limit: FREE_DREAM_LIMIT,
       tier: "free",
     });

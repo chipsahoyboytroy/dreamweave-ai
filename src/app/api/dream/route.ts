@@ -86,22 +86,39 @@ export async function POST(request: NextRequest) {
     let useFreeCredit = false;
     if (userId) {
       // Authenticated user — check credits (starts with 3 free)
-      const credits = await getUserCredits(userId);
-      if (credits < 1) {
-        return new Response(
-          JSON.stringify({ error: "You've used all your free dreams. Purchase credits to continue." }),
-          { status: 402 }
-        );
+      try {
+        const credits = await getUserCredits(userId);
+        if (credits < 1) {
+          return new Response(
+            JSON.stringify({ error: "You've used all your free dreams. Purchase credits to continue." }),
+            { status: 402 }
+          );
+        }
+        useFreeCredit = true;
+      } catch (dbError) {
+        // If DB is unreachable, allow the request rather than blocking authenticated users
+        logger.error("User credit check failed — allowing request", {
+          error: dbError instanceof Error ? dbError.message : "unknown",
+          userId,
+        });
+        useFreeCredit = false; // Don't try to deduct if we can't verify
       }
-      useFreeCredit = true;
     } else if (guestId) {
       // Guest user — count dreams by guestId
-      const guestDreams = await getGuestDreamCount(guestId);
-      if (guestDreams >= FREE_DREAM_LIMIT) {
-        return new Response(
-          JSON.stringify({ error: "You've used all 3 free dreams. Sign up and purchase credits to continue." }),
-          { status: 402 }
-        );
+      try {
+        const guestDreams = await getGuestDreamCount(guestId);
+        if (guestDreams >= FREE_DREAM_LIMIT) {
+          return new Response(
+            JSON.stringify({ error: "You've used all 3 free dreams. Sign up and purchase credits to continue." }),
+            { status: 402 }
+          );
+        }
+      } catch (dbError) {
+        // If DB is unreachable, allow the request rather than blocking a potentially new user
+        logger.error("Guest dream count check failed — allowing request", {
+          error: dbError instanceof Error ? dbError.message : "unknown",
+          guestId,
+        });
       }
     }
 

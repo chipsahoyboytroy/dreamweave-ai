@@ -46,37 +46,31 @@ export async function getGuestRemainingDreams(guestId: string): Promise<number> 
  */
 export async function deductCredit(userId: string, amount: number = 1): Promise<boolean> {
   try {
-    // SECURITY: Atomic check-and-decrement in a single query — no TOCTOU gap
-    const result = await prisma.$transaction([
-      prisma.user.updateMany({
-        where: {
-          id: userId,
-          credits: { gte: amount }, // SECURITY: Atomic guard — only succeeds if credits >= amount
-        },
-        data: { credits: { decrement: amount } },
-      }),
-      prisma.creditTransaction.create({
-        data: {
-          userId,
-          amount: -amount,
-          reason: "dream_generation",
-        },
-      }),
-    ]);
+    // SECURITY: Atomic check-and-decrement — first verify credits, then log the transaction.
+    // This avoids the previous issue where a credit transaction log was created and then
+    // rolled back with deleteMany (which could accidentally delete legitimate past entries).
+    const updateResult = await prisma.user.updateMany({
+      where: {
+        id: userId,
+        credits: { gte: amount }, // SECURITY: Atomic guard — only succeeds if credits >= amount
+      },
+      data: { credits: { decrement: amount } },
+    });
 
-    // If updateMany matched 0 rows, the user had insufficient credits
-    if (result[0].count === 0) {
+    // If updateMany matched 0 rows, the user had insufficient credits — nothing was written
+    if (updateResult.count === 0) {
       logger.warn("Credit deduction failed — insufficient credits (atomic check)", { userId });
-      // SECURITY: Roll back the transaction log entry for the failed deduction
-      await prisma.creditTransaction.deleteMany({
-        where: {
-          userId,
-          amount: -amount,
-          reason: "dream_generation",
-        },
-      });
       return false;
     }
+
+    // Only create the transaction log AFTER the credit was successfully deducted
+    await prisma.creditTransaction.create({
+      data: {
+        userId,
+        amount: -amount,
+        reason: "dream_generation",
+      },
+    });
 
     return true;
   } catch (error) {

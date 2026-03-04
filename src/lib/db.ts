@@ -2,12 +2,18 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query"] : [],
+function createPrismaClient(): PrismaClient {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query"] : ["error", "warn"],
+    // Connection pool & timeout settings for production resilience
+    datasourceUrl: process.env.DATABASE_URL,
   });
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+// Cache the singleton in ALL environments (including production)
+// to prevent connection pool exhaustion on serverless cold starts
+globalForPrisma.prisma = prisma;
 
 export default prisma;
