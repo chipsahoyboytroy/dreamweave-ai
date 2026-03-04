@@ -71,8 +71,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           select: { credits: true, tier: true },
         });
         if (dbUser) {
-          (session.user as Record<string, unknown>).credits = dbUser.credits;
-          (session.user as Record<string, unknown>).tier = dbUser.tier;
+          (session.user as unknown as Record<string, unknown>).credits = dbUser.credits;
+          (session.user as unknown as Record<string, unknown>).tier = dbUser.tier;
         }
       }
       return session;
