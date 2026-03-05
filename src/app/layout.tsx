@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "DreamWeave AI — Multimodal Dream Interpreter & Narrative Weaver",
@@ -48,6 +49,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="min-h-screen bg-dream-bg text-dream-text antialiased">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
