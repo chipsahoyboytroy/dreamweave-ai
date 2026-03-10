@@ -10,7 +10,7 @@ const openai = null;
 
 export default openai;
 
-const OLLAMA_BASE = "http://localhost:11434";
+const OLLAMA_BASE = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 
 /** Returns true — Ollama is always available locally */
 export function isOpenAIAvailable(): boolean {
