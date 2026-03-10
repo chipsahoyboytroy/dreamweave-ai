@@ -1,26 +1,20 @@
 // ═══════════════════════════════════════════════════════
-// DreamWeave AI — OpenAI Client & AI Utilities
+// DreamWeave AI — Ollama AI Utilities (llama3.1)
 // SECURITY: Input length guards, safe error handling (OWASP A03, A09)
 // ═══════════════════════════════════════════════════════
 
-import OpenAI from "openai";
 import { logger } from "./logger";
 
-// API key is optional — the app works without it using the built-in dream engine
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      // Prevent Next.js from caching OpenAI API responses
-      // Without this, every dream returns the same cached interpretation
-      fetch: (url, init) => fetch(url, { ...init, cache: "no-store" }),
-    })
-  : null;
+// No external AI client — uses local Ollama instance
+const openai = null;
 
 export default openai;
 
-/** Returns true if OpenAI is configured and available */
+const OLLAMA_BASE = "http://localhost:11434";
+
+/** Returns true — Ollama is always available locally */
 export function isOpenAIAvailable(): boolean {
-  return openai !== null;
+  return true;
 }
 
 /**
@@ -40,66 +34,55 @@ function guardMessageLengths(
   }));
 }
 
-// Stream a chat completion
+// Stream a chat completion (yields full Ollama response as one chunk)
 export async function* streamChatCompletion(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  model: string = "gpt-4o"
+  model: string = "llama3.1"
 ) {
-  if (!openai) {
-    logger.warn("OpenAI not configured — streamChatCompletion skipped");
-    return;
-  }
-
-  // SECURITY: Guard input lengths before sending to API (OWASP A03)
+  // SECURITY: Guard input lengths before sending to Ollama (OWASP A03)
   const safeMessages = guardMessageLengths(messages);
 
-  const stream = await openai.chat.completions.create({
-    model,
-    messages: safeMessages,
-    stream: true,
-    temperature: 0.85,
-    max_tokens: 2000,
-  });
+  const content = await fetch(`${OLLAMA_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "llama3.1",
+      messages: safeMessages,
+      stream: false,
+    }),
+  })
+    .then((res) => res.json())
+    .then((data) => data.message?.content ?? "");
 
-  for await (const chunk of stream) {
-    const content = chunk.choices[0]?.delta?.content;
-    if (content) {
-      yield content;
-    }
+  if (content) {
+    yield content;
   }
 }
 
 // Non-streaming completion for structured data (analysis)
 export async function getChatCompletion(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  model: string = "gpt-4o-mini"
+  model: string = "llama3.1"
 ): Promise<string> {
-  if (!openai) {
-    logger.warn("OpenAI not configured — getChatCompletion skipped");
-    return "";
-  }
-
-  // SECURITY: Guard input lengths before sending to API
+  // SECURITY: Guard input lengths before sending to Ollama (OWASP A03)
   const safeMessages = guardMessageLengths(messages);
 
-  const response = await openai.chat.completions.create({
-    model,
-    messages: safeMessages,
-    temperature: 0.7,
-    max_tokens: 1000,
-  });
-
-  return response.choices[0]?.message?.content || "";
+  return fetch(`${OLLAMA_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "llama3.1",
+      messages: safeMessages,
+      stream: false,
+    }),
+  })
+    .then((res) => res.json())
+    .then((data) => data.message?.content ?? "");
 }
 
-// Vision analysis — describe an uploaded dream image
+// Vision analysis — llama3.1 is text-only; returns empty string
 export async function analyzeImage(imageBase64: string): Promise<string> {
-  if (!openai) {
-    logger.warn("OpenAI not configured — analyzeImage skipped");
-    return "";
-  }
-
-  // SECURITY: Validate base64 URI prefix before sending to OpenAI Vision API
+  // SECURITY: Validate base64 URI prefix before processing
   const validPrefixes = ["data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/webp", "data:image/gif"];
   const isValidFormat = validPrefixes.some((p) => imageBase64.toLowerCase().startsWith(p));
   if (!isValidFormat) {
@@ -107,39 +90,12 @@ export async function analyzeImage(imageBase64: string): Promise<string> {
     throw new Error("Invalid image format");
   }
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: "Describe this image in detail as if it were a scene from a dream. Focus on symbols, emotions, colors, and surreal elements. Be poetic but specific. 2-3 sentences.",
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: imageBase64,
-              detail: "low",
-            },
-          },
-        ],
-      },
-    ],
-    max_tokens: 300,
-  });
-
-  return response.choices[0]?.message?.content || "";
+  logger.warn("analyzeImage called — llama3.1 does not support vision; returning empty");
+  return "";
 }
 
-// Transcribe audio using Whisper
+// Transcribe audio — Ollama does not support STT; returns empty string
 export async function transcribeAudio(audioBase64: string): Promise<string> {
-  if (!openai) {
-    logger.warn("OpenAI not configured — transcribeAudio skipped");
-    return "";
-  }
-
   // SECURITY: Validate audio MIME type prefix
   const validPrefixes = ["data:audio/webm", "data:audio/mp4", "data:audio/mpeg", "data:audio/ogg", "data:audio/wav"];
   const isValidFormat = validPrefixes.some((p) => audioBase64.toLowerCase().startsWith(p));
@@ -148,43 +104,14 @@ export async function transcribeAudio(audioBase64: string): Promise<string> {
     throw new Error("Invalid audio format");
   }
 
-  // Convert base64 to buffer
-  const base64Data = audioBase64.replace(/^data:audio\/\w+;base64,/, "");
-  const buffer = Buffer.from(base64Data, "base64");
-
-  // SECURITY: Enforce max audio size (5MB) to prevent billing abuse
-  if (buffer.length > 5 * 1024 * 1024) {
-    throw new Error("Audio file too large");
-  }
-
-  // Create a File-like object for the API
-  const file = new File([buffer], "audio.webm", { type: "audio/webm" });
-
-  const transcription = await openai.audio.transcriptions.create({
-    file,
-    model: "whisper-1",
-    language: "en",
-  });
-
-  return transcription.text;
+  logger.warn("transcribeAudio called — Ollama does not support STT; returning empty");
+  return "";
 }
 
-// Generate TTS narration
+// Generate TTS narration — Ollama does not support TTS; returns null
 export async function generateNarration(
   text: string
 ): Promise<Buffer | null> {
-  if (!openai) {
-    logger.warn("OpenAI not configured — generateNarration skipped");
-    return null;
-  }
-
-  const mp3 = await openai.audio.speech.create({
-    model: "tts-1-hd",
-    voice: "nova", // Warm, mystic voice
-    input: text.slice(0, 4000), // TTS limit
-    speed: 0.95,
-  });
-
-  const arrayBuffer = await mp3.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  logger.warn("generateNarration called — Ollama does not support TTS; returning null");
+  return null;
 }

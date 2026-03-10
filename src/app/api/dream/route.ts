@@ -245,28 +245,8 @@ export async function POST(request: NextRequest) {
           }
 
           // ─── Step 6: Generate audio (if OpenAI available) ─────
-          if (useAI && openai && fullInterpretation) {
-            try {
-              const narrationText = `${analysis.summary}\n\n${fullInterpretation.slice(0, 2000)}`;
-              send("audio", "generating");
-
-              const mp3 = await openai.audio.speech.create({
-                model: "tts-1",
-                voice: "nova",
-                input: narrationText.slice(0, 4000),
-                speed: 0.95,
-              });
-              const arrayBuffer = await mp3.arrayBuffer();
-              const base64Audio = Buffer.from(arrayBuffer).toString("base64");
-              send("audio", `data:audio/mpeg;base64,${base64Audio}`);
-            } catch (e) {
-              logger.warn("Audio generation failed", { error: e instanceof Error ? e.message : "unknown" });
-              send("audio", "");
-            }
-          } else {
-            // No audio generation — client can use browser SpeechSynthesis
-            send("audio", "");
-          }
+          // No audio generation — client can use browser SpeechSynthesis
+          send("audio", "");
 
           // ─── Step 7: Deduct credit & save to DB ─────
           if (useFreeCredit && userId) {

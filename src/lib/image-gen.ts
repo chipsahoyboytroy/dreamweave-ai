@@ -3,12 +3,11 @@
 // SECURITY: Prompt sanitization prevents injection attacks (OWASP A03)
 // ═══════════════════════════════════════════════════════
 
-import openai from "./openai";
 import { logger } from "./logger";
 
 /** Returns true if any image generation service is configured */
 export function isImageGenAvailable(): boolean {
-  return !!(process.env.FAL_KEY || process.env.OPENAI_API_KEY);
+  return !!(process.env.FAL_KEY);
 }
 
 interface ImageGenResult {
@@ -70,24 +69,7 @@ async function generateWithFal(prompt: string): Promise<ImageGenResult> {
   return { url: data.images?.[0]?.url || data.output?.url };
 }
 
-// Fallback: DALL-E 3
-async function generateWithDalle(prompt: string): Promise<ImageGenResult> {
-  if (!openai) throw new Error("OpenAI not configured");
 
-  // SECURITY: Sanitize prompt before sending to external API
-  const safePrompt = sanitizeImagePrompt(prompt);
-
-  const response = await openai.images.generate({
-    model: "dall-e-3",
-    prompt: `Surreal dreamscape digital art: ${safePrompt}. Ethereal lighting, painterly quality, cosmic elements, no text, beautiful and mystical.`,
-    n: 1,
-    size: "1792x1024",
-    quality: "hd",
-    style: "vivid",
-  });
-
-  return { url: response.data?.[0]?.url || "" };
-}
 
 export async function generateDreamImage(prompt: string): Promise<string> {
   // If no image generation service is configured, return empty string
@@ -108,17 +90,5 @@ export async function generateDreamImage(prompt: string): Promise<string> {
     });
   }
 
-  try {
-    // Fallback to DALL-E 3
-    if (openai) {
-      const result = await generateWithDalle(prompt);
-      return result.url;
-    }
-    return "";
-  } catch (e) {
-    logger.error("All image generation failed", {
-      error: e instanceof Error ? e.message : "unknown",
-    });
-    return "";
-  }
+  return "";
 }
