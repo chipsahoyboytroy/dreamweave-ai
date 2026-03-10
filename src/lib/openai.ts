@@ -42,17 +42,22 @@ export async function* streamChatCompletion(
   // SECURITY: Guard input lengths before sending to Ollama (OWASP A03)
   const safeMessages = guardMessageLengths(messages);
 
-  const content = await fetch(`${OLLAMA_BASE}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "llama3.1",
-      messages: safeMessages,
-      stream: false,
-    }),
-  })
-    .then((res) => res.json())
-    .then((data) => data.message?.content ?? "");
+  let content = "";
+  try {
+    content = await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama3.1",
+        messages: safeMessages,
+        stream: false,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => data.message?.content ?? "");
+  } catch (e) {
+    logger.warn("Ollama streamChatCompletion failed", { error: e instanceof Error ? e.message : "unknown" });
+  }
 
   if (content) {
     yield content;
@@ -67,17 +72,22 @@ export async function getChatCompletion(
   // SECURITY: Guard input lengths before sending to Ollama (OWASP A03)
   const safeMessages = guardMessageLengths(messages);
 
-  return fetch(`${OLLAMA_BASE}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "llama3.1",
-      messages: safeMessages,
-      stream: false,
-    }),
-  })
-    .then((res) => res.json())
-    .then((data) => data.message?.content ?? "");
+  try {
+    return await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama3.1",
+        messages: safeMessages,
+        stream: false,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => data.message?.content ?? "");
+  } catch (e) {
+    logger.warn("Ollama getChatCompletion failed", { error: e instanceof Error ? e.message : "unknown" });
+    return "";
+  }
 }
 
 // Vision analysis — llama3.1 is text-only; returns empty string

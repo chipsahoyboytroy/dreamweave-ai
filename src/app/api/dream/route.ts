@@ -206,8 +206,9 @@ export async function POST(request: NextRequest) {
               fullInterpretation += chunk;
               send("interpretation", chunk);
             }
-          } else {
-            // Built-in engine streaming
+          }
+          // Fall back to built-in engine if Ollama returned nothing
+          if (!fullInterpretation) {
             for await (const chunk of streamInterpretation(text, mood)) {
               fullInterpretation += chunk;
               send("interpretation", chunk);
@@ -222,8 +223,9 @@ export async function POST(request: NextRequest) {
               fullStory += chunk;
               send("story", chunk);
             }
-          } else {
-            // Built-in engine story
+          }
+          // Fall back to built-in engine if Ollama returned nothing
+          if (!fullStory) {
             for await (const chunk of streamStory(text, mood)) {
               fullStory += chunk;
               send("story", chunk);
